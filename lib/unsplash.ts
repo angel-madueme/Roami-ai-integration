@@ -8,6 +8,7 @@ export interface UnsplashPhoto {
 export async function findDestinationPhoto(
   _destination: string
 ): Promise<UnsplashPhoto | null> {
+  void _destination;
   // TODO: Search Unsplash and return null for empty results or any provider failure.
   return null;
 }

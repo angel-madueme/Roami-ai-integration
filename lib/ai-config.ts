@@ -32,4 +32,9 @@ export const AI_CONFIG = {
       windowMs: 10 * 60 * 1000,
     },
   },
+  upload: {
+    maxFileSizeBytes: 10 * 1024 * 1024,
+    allowedMimeTypes: ["image/jpeg", "image/png"] as const,
+    stubDelayMs: 500,
+  },
 } as const;

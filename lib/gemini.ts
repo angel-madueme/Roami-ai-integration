@@ -8,6 +8,7 @@ export interface GeminiExtractionRequest {
 export async function extractItineraryWithGemini(
   _request: GeminiExtractionRequest
 ): Promise<unknown> {
+  void _request;
   // TODO: Call Gemini 2.5 Flash through Google's official Gemini SDK.
   throw new Error("Gemini integration not implemented yet.");
 }
