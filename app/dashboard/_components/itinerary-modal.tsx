@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
+import { AI_CONFIG } from "@/lib/ai-config";
 
 type ActivityCategory = "TRANSPORT" | "LODGING" | "FOOD" | "SIGHTSEEING" | "OTHER";
 
@@ -250,7 +251,7 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
       }
     };
     void poll();
-    const interval = window.setInterval(() => void poll(), 2000);
+    const interval = window.setInterval(() => void poll(), AI_CONFIG.client.jobPollIntervalMs);
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [errorOverlayOpen, jobId, open, screen]);
 
@@ -262,7 +263,7 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
     const interval = window.setInterval(() => {
       index = (index + 1) % messages.length;
       setLoadingMessage(messages[index]);
-    }, 2800);
+    }, AI_CONFIG.client.loadingMessageIntervalMs);
     return () => window.clearInterval(interval);
   }, [errorOverlayOpen, jobId, open, screen]);
 
@@ -304,7 +305,7 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
               <button type="button" onClick={onClose} className="rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-white" aria-label="Close">×</button>
             </div>
           </div>
-          <div className="min-h-0 overflow-y-auto px-6 py-6 sm:px-9 sm:py-7">
+          <div className="min-h-0 overflow-y-auto px-6 pb-6 pt-4 sm:px-9 sm:pb-7 sm:pt-5">
             {screen === "upload" && <UploadScreen key={uploadKey} loadingMessage={loadingMessage} onStarted={(id) => { setLoadingMessage("Reading your notes..."); setJobId(id); }} />}
             {screen === "result" && itinerary && (
               <div className="w-full max-w-[760px]">
@@ -317,11 +318,12 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
       </div>
       {errorOverlayOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[2px]" onClick={closeEverything} role="dialog" aria-modal="true" aria-labelledby="itinerary-error-title">
-          <div className="relative w-full max-w-[26rem] rounded-3xl bg-white p-7 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="relative w-full max-w-[26rem] rounded-3xl bg-white px-9 py-9 text-center shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <button type="button" onClick={closeEverything} className="absolute right-5 top-4 rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-slate-50" aria-label="Close">×</button>
-            <h2 id="itinerary-error-title" className="pr-10 text-3xl font-extrabold tracking-tight text-slate-900">We couldn't read that image</h2>
-            <p className="mt-2 text-base text-slate-500">Try again with a clearer photo or better-lit notes.</p>
-            <button type="button" onClick={retryUpload} className="mt-7 w-full rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-3.5 text-lg font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-600 hover:to-blue-700">Try again</button>
+            <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-red-500 text-6xl font-light leading-none text-white" aria-hidden="true">×</div>
+            <h2 id="itinerary-error-title" className="mt-8 text-[2.25rem] font-extrabold leading-tight tracking-tight text-slate-900">We couldn't read that image</h2>
+            <p className="mt-5 text-[1.2rem] leading-8 text-slate-500">Try again with a clearer photo or better-lit notes.</p>
+            <button type="button" onClick={retryUpload} className="mt-9 w-full rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-3.5 text-lg font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-600 hover:to-blue-700">Try again</button>
           </div>
         </div>
       )}

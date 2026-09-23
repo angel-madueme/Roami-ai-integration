@@ -5,7 +5,8 @@
 export const AI_CONFIG = {
   gemini: {
     model: "gemini-3-flash-preview",
-    maxOutputTokens: 4096,
+    // The extraction shape is compact; this cap avoids waiting for unnecessary output.
+    maxOutputTokens: 2048,
     // Low temperature keeps extraction deterministic and factual.
     temperature: 0.1,
     timeoutMs: 30_000,
@@ -35,5 +36,9 @@ export const AI_CONFIG = {
   upload: {
     maxFileSizeBytes: 20 * 1024 * 1024,
     allowedMimeTypes: ["image/jpeg", "image/png"] as const,
+  },
+  client: {
+    jobPollIntervalMs: 1_000,
+    loadingMessageIntervalMs: 2_800,
   },
 } as const;
