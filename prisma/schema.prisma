@@ -95,8 +95,8 @@ model Itinerary {
   id                       String   @id @default(cuid())
   jobId                    String   @unique
   destination              String
-  startDate                DateTime
-  endDate                  DateTime
+  startDate                DateTime?
+  endDate                  DateTime?
   unsplashImageUrl         String?
   unsplashPhotographerName String?
   unsplashPhotographerUrl  String?

@@ -9,13 +9,13 @@ import { findDestinationPhoto } from "@/lib/unsplash";
 const extractionPrompt = `
 You are Roami's itinerary extraction model. Read the uploaded travel-notes image and return only the structured JSON requested by the response schema.
 
-Extract the destination, start date, end date, and every identifiable activity. Dates must be valid ISO calendar dates in YYYY-MM-DD format, never natural-language dates, timestamps, prose, or empty strings. The destination must be a non-empty place name and every activity title must be non-empty. Categorize each activity as exactly one of TRANSPORT, LODGING, FOOD, SIGHTSEEING, or OTHER. Preserve uncertainty honestly in the note rather than inventing details. If the image does not contain enough information to identify a complete destination and date range, return the best-supported non-empty values only when they are actually present; otherwise return a structured response that will fail validation rather than inventing a destination or date.
+Extract the destination, start date, end date, and every identifiable activity. Dates must be valid ISO calendar dates in YYYY-MM-DD format when genuine dates are identifiable in the notes. If no genuine start or end date is identifiable, return null for that field: do not guess, do not use today's date, and do not use a zero/epoch placeholder such as 0000-01-01. The destination must be a non-empty place name and every activity title must be non-empty. Categorize each activity as exactly one of TRANSPORT, LODGING, FOOD, SIGHTSEEING, or OTHER. Preserve uncertainty honestly in the note rather than inventing details. If the image does not contain enough information to identify a destination, return a structured response that will fail validation rather than inventing one.
 `;
 
 const itineraryExtractionSchema = z.object({
   destination: z.string().min(1),
-  startDate: z.iso.date(),
-  endDate: z.iso.date(),
+  startDate: z.iso.date().nullable(),
+  endDate: z.iso.date().nullable(),
   activities: z.array(
     z.object({
       category: z.enum(["TRANSPORT", "LODGING", "FOOD", "SIGHTSEEING", "OTHER"]),
@@ -105,8 +105,8 @@ async function processJob(jobId: string): Promise<void> {
     data: {
       jobId,
       destination: validated.destination,
-      startDate: new Date(`${validated.startDate}T00:00:00.000Z`),
-      endDate: new Date(`${validated.endDate}T00:00:00.000Z`),
+      startDate: validated.startDate ? new Date(`${validated.startDate}T00:00:00.000Z`) : null,
+      endDate: validated.endDate ? new Date(`${validated.endDate}T00:00:00.000Z`) : null,
       unsplashImageUrl: destinationPhoto?.imageUrl ?? null,
       unsplashPhotographerName: destinationPhoto?.photographerName ?? null,
       unsplashPhotographerUrl: destinationPhoto?.photographerUrl ?? null,

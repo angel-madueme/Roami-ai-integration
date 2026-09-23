@@ -10,13 +10,13 @@ export const runtime = "nodejs";
 const expansionPrompt = `
 You are Roami's itinerary expansion model. Return only a JSON object matching the requested itinerary schema.
 
-Preserve the destination, dates, and every existing activity in its current order. Improve each existing activity's note with useful, concrete detail grounded in the supplied itinerary. You may append one or two additional relevant activities for the destination. New activities must use exactly one of TRANSPORT, LODGING, FOOD, SIGHTSEEING, or OTHER. Do not invent a new destination or change the dates.
+Preserve the destination, dates, and every existing activity in its current order. Preserve null dates as null; do not invent dates or change genuine dates. Improve each existing activity's note with useful, concrete detail grounded in the supplied itinerary. You may append one or two additional relevant activities for the destination. New activities must use exactly one of TRANSPORT, LODGING, FOOD, SIGHTSEEING, or OTHER. Do not invent a new destination.
 `;
 
 const itinerarySchema = z.object({
   destination: z.string().min(1),
-  startDate: z.iso.date(),
-  endDate: z.iso.date(),
+  startDate: z.iso.date().nullable(),
+  endDate: z.iso.date().nullable(),
   activities: z.array(z.object({
     category: z.enum(["TRANSPORT", "LODGING", "FOOD", "SIGHTSEEING", "OTHER"]),
     title: z.string().min(1),
@@ -57,8 +57,8 @@ export async function POST(
 
   const currentItinerary = {
     destination: itinerary.destination,
-    startDate: itinerary.startDate.toISOString().slice(0, 10),
-    endDate: itinerary.endDate.toISOString().slice(0, 10),
+    startDate: itinerary.startDate?.toISOString().slice(0, 10) ?? null,
+    endDate: itinerary.endDate?.toISOString().slice(0, 10) ?? null,
     activities: itinerary.activities.map(({ category, title, note }) => ({ category, title, note })),
   };
 

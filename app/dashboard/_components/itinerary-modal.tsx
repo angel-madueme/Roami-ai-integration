@@ -17,8 +17,8 @@ type Activity = {
 type Itinerary = {
   id: string;
   destination: string;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   unsplashImageUrl: string | null;
   unsplashPhotographerName: string | null;
   unsplashPhotographerUrl: string | null;
@@ -46,7 +46,8 @@ function formatDate(date: string): string {
   return parsed.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function formatDateRange(startDate: string, endDate: string): string {
+function formatDateRange(startDate: string | null, endDate: string | null): string {
+  if (!startDate || !endDate) return "Dates not found in your notes";
   return `${formatDate(startDate)} → ${formatDate(endDate)}`;
 }
 
@@ -192,7 +193,7 @@ function WaveSpinner() {
   return <span className="wave-spinner" aria-label="Loading"><i /><i /><i /></span>;
 }
 
-function ResultScreen({ itinerary, onExpand, expanding, detailsVisible }: { itinerary: Itinerary; onExpand: () => void; expanding: boolean; detailsVisible: boolean }) {
+function ResultScreen({ itinerary, onExpand, onDone, expanding, detailsVisible }: { itinerary: Itinerary; onExpand: () => void; onDone: () => void; expanding: boolean; detailsVisible: boolean }) {
   return (
     <Card className="max-w-[760px] px-8 py-10 sm:px-10">
       {itinerary.unsplashImageUrl && (
@@ -216,9 +217,12 @@ function ResultScreen({ itinerary, onExpand, expanding, detailsVisible }: { itin
           </div>
         ))}
       </div>
-      <div className="mt-8 pt-7">
-        <button type="button" onClick={onExpand} disabled={expanding} className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-blue-500 py-3.5 text-xl font-medium text-blue-600 transition hover:bg-blue-50 disabled:cursor-wait disabled:opacity-70">
+      <div className="mt-8 flex gap-3 pt-7">
+        <button type="button" onClick={onExpand} disabled={expanding} className="flex min-w-0 flex-1 items-center justify-center gap-3 rounded-2xl border-2 border-blue-500 py-3.5 text-xl font-medium text-blue-600 transition hover:bg-blue-50 disabled:cursor-wait disabled:opacity-70">
           {expanding ? <><WaveSpinner /> Loading...</> : detailsVisible ? "Hide details" : "Add details"}
+        </button>
+        <button type="button" onClick={onDone} className="flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-3.5 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-600 hover:to-blue-700">
+          Done
         </button>
       </div>
     </Card>
@@ -326,7 +330,7 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
             {screen === "upload" && <UploadScreen key={uploadKey} loadingMessage={loadingMessage} onStarted={(id) => { setLoadingMessage("Reading your notes..."); setJobId(id); }} />}
             {screen === "result" && displayedItinerary && (
               <div className="w-full max-w-[760px]">
-                <ResultScreen itinerary={displayedItinerary} onExpand={expand} expanding={expanding} detailsVisible={detailsVisible} />
+                <ResultScreen itinerary={displayedItinerary} onExpand={expand} onDone={onClose} expanding={expanding} detailsVisible={detailsVisible} />
                 {expandError && <p role="alert" className="relative z-10 mt-4 text-center text-sm font-medium text-red-600">{expandError}</p>}
               </div>
             )}

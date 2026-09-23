@@ -25,12 +25,14 @@ const EXTRACTION_RESPONSE_SCHEMA = {
     startDate: {
       type: Type.STRING,
       format: "date",
-      description: "A valid ISO calendar date in YYYY-MM-DD format. Never return an empty string or prose.",
+      nullable: true,
+      description: "A genuine ISO calendar date in YYYY-MM-DD format, or null when no real start date appears in the notes. Never guess or use a placeholder date.",
     },
     endDate: {
       type: Type.STRING,
       format: "date",
-      description: "A valid ISO calendar date in YYYY-MM-DD format. Never return an empty string or prose.",
+      nullable: true,
+      description: "A genuine ISO calendar date in YYYY-MM-DD format, or null when no real end date appears in the notes. Never guess or use a placeholder date.",
     },
     activities: {
       type: Type.ARRAY,
