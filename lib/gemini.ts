@@ -17,9 +17,21 @@ export class GeminiTimeoutError extends Error {
 const EXTRACTION_RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
-    destination: { type: Type.STRING },
-    startDate: { type: Type.STRING, description: "ISO date in YYYY-MM-DD format." },
-    endDate: { type: Type.STRING, description: "ISO date in YYYY-MM-DD format." },
+    destination: {
+      type: Type.STRING,
+      minLength: "1",
+      description: "The named destination from the notes. Never return an empty string.",
+    },
+    startDate: {
+      type: Type.STRING,
+      format: "date",
+      description: "A valid ISO calendar date in YYYY-MM-DD format. Never return an empty string or prose.",
+    },
+    endDate: {
+      type: Type.STRING,
+      format: "date",
+      description: "A valid ISO calendar date in YYYY-MM-DD format. Never return an empty string or prose.",
+    },
     activities: {
       type: Type.ARRAY,
       items: {
@@ -29,7 +41,7 @@ const EXTRACTION_RESPONSE_SCHEMA = {
             type: Type.STRING,
             enum: ["TRANSPORT", "LODGING", "FOOD", "SIGHTSEEING", "OTHER"],
           },
-          title: { type: Type.STRING },
+          title: { type: Type.STRING, minLength: "1" },
           note: { type: Type.STRING },
         },
         required: ["category", "title", "note"],

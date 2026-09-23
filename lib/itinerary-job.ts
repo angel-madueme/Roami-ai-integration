@@ -9,7 +9,7 @@ import { findDestinationPhoto } from "@/lib/unsplash";
 const extractionPrompt = `
 You are Roami's itinerary extraction model. Read the uploaded travel-notes image and return only the structured JSON requested by the response schema.
 
-Extract the destination, start date, end date, and every identifiable activity. Dates must be ISO dates in YYYY-MM-DD format. Categorize each activity as exactly one of TRANSPORT, LODGING, FOOD, SIGHTSEEING, or OTHER. Preserve uncertainty honestly in the note rather than inventing details. If a value cannot be identified, return the required field with an empty string or an empty activities array rather than adding prose outside the JSON object.
+Extract the destination, start date, end date, and every identifiable activity. Dates must be valid ISO calendar dates in YYYY-MM-DD format, never natural-language dates, timestamps, prose, or empty strings. The destination must be a non-empty place name and every activity title must be non-empty. Categorize each activity as exactly one of TRANSPORT, LODGING, FOOD, SIGHTSEEING, or OTHER. Preserve uncertainty honestly in the note rather than inventing details. If the image does not contain enough information to identify a complete destination and date range, return the best-supported non-empty values only when they are actually present; otherwise return a structured response that will fail validation rather than inventing a destination or date.
 `;
 
 const itineraryExtractionSchema = z.object({
