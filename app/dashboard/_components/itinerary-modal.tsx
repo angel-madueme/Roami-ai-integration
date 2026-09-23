@@ -32,14 +32,13 @@ type JobResponse = {
   errorMessage?: string | null;
 };
 
-const categoryStyles: Record<ActivityCategory, { symbol: string; className: string; label: string }> = {
-  TRANSPORT: { symbol: "✈", className: "bg-blue-50 text-blue-600", label: "Transport" },
-  LODGING: { symbol: "▣", className: "bg-violet-50 text-violet-600", label: "Lodging" },
-  FOOD: { symbol: "♜", className: "bg-orange-50 text-orange-500", label: "Food" },
-  SIGHTSEEING: { symbol: "◉", className: "bg-emerald-50 text-emerald-600", label: "Sightseeing" },
-  OTHER: { symbol: "◇", className: "bg-pink-50 text-pink-500", label: "Other" },
+const categoryStyles: Record<ActivityCategory, { className: string; label: string }> = {
+  TRANSPORT: { className: "bg-blue-50 text-blue-600", label: "Transport" },
+  LODGING: { className: "bg-violet-50 text-violet-600", label: "Lodging" },
+  FOOD: { className: "bg-orange-50 text-orange-500", label: "Food" },
+  SIGHTSEEING: { className: "bg-emerald-50 text-emerald-600", label: "Sightseeing" },
+  OTHER: { className: "bg-slate-100 text-slate-600", label: "Other" },
 };
-
 function formatDate(date: string): string {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return date;
@@ -60,9 +59,20 @@ function Arrow() {
 
 function ActivityIcon({ category }: { category: ActivityCategory }) {
   const style = categoryStyles[category] ?? categoryStyles.OTHER;
-  return <span aria-label={style.label} className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold ${style.className}`}>{style.symbol}</span>;
-}
+  const icon = {
+    TRANSPORT: <><path d="m4 12 16-5-4.5 5L20 17 4 12Z" /><path d="M8 12 5 7.5M8 12 5 16.5" /></>,
+    LODGING: <><path d="M4 17v-6.5A2.5 2.5 0 0 1 6.5 8h2A2.5 2.5 0 0 1 11 10.5V17" /><path d="M11 12h5.5A3.5 3.5 0 0 1 20 15.5V17M4 14h16M4 17v2M20 17v2" /></>,
+    FOOD: <><path d="M6 4v7M4 4v4a2 2 0 0 0 4 0V4M6 11v9" /><path d="M15 4v16M15 4c2.2 1.2 3.5 3.1 3.5 5.5H15" /></>,
+    SIGHTSEEING: <><path d="M4 9.5 12 4l8 5.5V20H4V9.5Z" /><path d="M8 20v-5h8v5M9 9h.01M12 9h.01M15 9h.01" /></>,
+    OTHER: <><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></>,
+  }[category] ?? <><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></>;
 
+  return (
+    <span aria-label={style.label} className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${style.className}`}>
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icon}</svg>
+    </span>
+  );
+}
 function UploadIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" aria-hidden="true">
@@ -148,7 +158,7 @@ function UploadScreen({ onStarted, loadingMessage }: { onStarted: (jobId: string
         onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`mt-6 flex min-h-[242px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition-colors ${dragging ? "border-blue-500 bg-blue-50" : "border-blue-300 bg-[#f7fbff]"}`}
+        className={`mt-6 flex min-h-[242px] cursor-pointer flex-col items-center justify-center rounded-2xl text-center transition-colors ${dragging ? "bg-blue-50" : "bg-[#f7fbff]"}`}
       >
         <span className="text-blue-500"><UploadIcon /></span>
         <p className="mt-4 text-xl font-medium text-[#101c4d]">Drag a photo here or <span className="text-blue-600 underline">click to browse</span></p>
@@ -168,7 +178,7 @@ function UploadScreen({ onStarted, loadingMessage }: { onStarted: (jobId: string
       )}
 
       {error && <UploadError message={error} />}
-      <button type="button" disabled={submitting || !file} onClick={submit} className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+      <button type="button" disabled={submitting || !file} onClick={submit} className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
         {submitting ? <><WaveSpinner /> {loadingMessage}</> : <>Extract notes <Arrow /></>}
       </button>
     </Card>
@@ -179,15 +189,11 @@ function WaveSpinner() {
   return <span className="wave-spinner" aria-label="Loading"><i /><i /><i /></span>;
 }
 
-function ResultScreen({ itinerary, onExpand, expanding }: { itinerary: Itinerary; onExpand: () => void; expanding: boolean }) {
+function ResultScreen({ itinerary, onExpand, expanding, detailsVisible }: { itinerary: Itinerary; onExpand: () => void; expanding: boolean; detailsVisible: boolean }) {
   return (
     <Card className="max-w-[760px] px-8 py-10 sm:px-10">
-      <div className="text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight text-[#101c4d]">Here’s your itinerary</h1>
-        <p className="mt-3 text-xl text-[#7180ad]">We found the following details from your notes.</p>
-      </div>
       {itinerary.unsplashImageUrl && (
-        <div className="relative mt-7 overflow-hidden rounded-2xl">
+        <div className="relative mt-4 overflow-hidden rounded-2xl">
           <img src={itinerary.unsplashImageUrl} alt={`Destination photo for ${itinerary.destination}`} className="h-64 w-full object-cover" />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-5 pb-4 pt-12 text-sm text-white">
             Photo by <a href={itinerary.unsplashPhotographerUrl ?? "https://unsplash.com"} target="_blank" rel="noreferrer" className="underline">{itinerary.unsplashPhotographerName ?? "Unsplash photographer"}</a> on <a href="https://unsplash.com" target="_blank" rel="noreferrer" className="underline">Unsplash</a>
@@ -207,19 +213,20 @@ function ResultScreen({ itinerary, onExpand, expanding }: { itinerary: Itinerary
           </div>
         ))}
       </div>
-      <div className="mt-8 border-t border-slate-200 pt-7">
-        <button type="button" onClick={onExpand} disabled={expanding} className="w-full rounded-2xl border-2 border-blue-500 py-3.5 text-xl font-medium text-blue-600 transition hover:bg-blue-50 disabled:cursor-wait disabled:opacity-70">
-          {expanding ? "Expanding…" : "Expand this itinerary"}
+      <div className="mt-8 pt-7">
+        <button type="button" onClick={onExpand} disabled={expanding} className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-blue-500 py-3.5 text-xl font-medium text-blue-600 transition hover:bg-blue-50 disabled:cursor-wait disabled:opacity-70">
+          {expanding ? <><WaveSpinner /> Loading...</> : detailsVisible ? "See less" : "See details"}
         </button>
       </div>
     </Card>
   );
 }
-
 export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [screen, setScreen] = useState<"upload" | "result">("upload");
   const [jobId, setJobId] = useState<string | null>(null);
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
+  const [expandedItinerary, setExpandedItinerary] = useState<Itinerary | null>(null);
+  const [detailsVisible, setDetailsVisible] = useState(false);
   const [errorOverlayOpen, setErrorOverlayOpen] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState("Reading your notes...");
@@ -269,13 +276,18 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
 
   async function expand() {
     if (!itinerary) return;
+    if (expandedItinerary) {
+      setDetailsVisible((visible) => !visible);
+      return;
+    }
     setExpanding(true);
     setExpandError(null);
     try {
       const response = await fetch(`/api/itinerary/${itinerary.id}/expand`, { method: "POST" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "We couldn't expand this itinerary.");
-      setItinerary(data.itinerary);
+      setExpandedItinerary(data.itinerary);
+      setDetailsVisible(true);
     } catch (error) {
       setExpandError(error instanceof Error ? error.message : "We couldn't expand this itinerary.");
     } finally {
@@ -284,6 +296,8 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
   }
 
   if (!open) return null;
+
+  const displayedItinerary = detailsVisible && expandedItinerary ? expandedItinerary : itinerary;
 
   const closeEverything = () => {
     setErrorOverlayOpen(false);
@@ -301,15 +315,15 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
         <div className="my-4 flex max-h-[calc(100vh-2rem)] w-full max-w-[43rem] flex-col overflow-hidden rounded-3xl bg-white" onClick={(event) => event.stopPropagation()}>
           <div className="shrink-0 bg-gradient-to-br from-blue-50 to-white px-7 py-7 sm:px-9">
             <div className="flex items-start justify-between gap-4">
-              <div><h2 id="itinerary-modal-title" className="text-3xl font-extrabold tracking-tight text-slate-900">{screen === "upload" ? "Extract from notes" : "Here’s your itinerary"}</h2><p className="mt-2 text-base text-slate-500">{screen === "upload" ? "Turn a photo of your travel notes into a structured itinerary." : "Review your extracted trip details and add more detail when ready."}</p></div>
+              <div><h2 id="itinerary-modal-title" className="text-3xl font-extrabold tracking-tight text-slate-900">{screen === "upload" ? "Extract from notes" : "Here’s your itinerary"}</h2><p className="mt-2 text-base text-slate-500">{screen === "upload" ? "Turn a photo of your travel notes into a structured itinerary." : "Add more detail and a few extra ideas for your trip."}</p></div>
               <button type="button" onClick={onClose} className="rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-white" aria-label="Close">×</button>
             </div>
           </div>
           <div className="min-h-0 overflow-y-auto px-6 pb-6 pt-4 sm:px-9 sm:pb-7 sm:pt-5">
             {screen === "upload" && <UploadScreen key={uploadKey} loadingMessage={loadingMessage} onStarted={(id) => { setLoadingMessage("Reading your notes..."); setJobId(id); }} />}
-            {screen === "result" && itinerary && (
+            {screen === "result" && displayedItinerary && (
               <div className="w-full max-w-[760px]">
-                <ResultScreen itinerary={itinerary} onExpand={expand} expanding={expanding} />
+                <ResultScreen itinerary={displayedItinerary} onExpand={expand} expanding={expanding} detailsVisible={detailsVisible} />
                 {expandError && <p role="alert" className="relative z-10 mt-4 text-center text-sm font-medium text-red-600">{expandError}</p>}
               </div>
             )}
