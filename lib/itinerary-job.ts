@@ -102,9 +102,9 @@ async function processJob(jobId: string): Promise<void> {
   const destinationPhoto = await findDestinationPhoto(validated.destination);
 
   await prisma.itinerary.create({
-    data: {
-      jobId,
-      destination: validated.destination,
+      data: {
+        job: { connect: { id: jobId } },
+        destination: validated.destination,
       startDate: validated.startDate ? new Date(`${validated.startDate}T00:00:00.000Z`) : null,
       endDate: validated.endDate ? new Date(`${validated.endDate}T00:00:00.000Z`) : null,
       unsplashImageUrl: destinationPhoto?.imageUrl ?? null,
