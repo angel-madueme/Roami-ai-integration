@@ -164,8 +164,8 @@ function UploadScreen({ onStarted }: { onStarted: (jobId: string) => void }) {
       )}
 
       {error && <p role="alert" className="mt-4 text-center text-sm font-medium text-red-600">{error}</p>}
-      <button type="button" disabled={submitting} onClick={submit} className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-wait disabled:opacity-70">
-        {submitting ? "Starting extraction…" : "Extract itinerary"} {!submitting && <Arrow />}
+      <button type="button" disabled={submitting || !file} onClick={submit} className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+        {submitting ? "Starting extraction…" : "Extract notes"} {!submitting && <Arrow />}
       </button>
     </Card>
   );
