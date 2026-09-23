@@ -1,10 +1,45 @@
 ## 1. What This Is
 
-_To be completed._
+This slice lets a signed-in Roami user upload a photo of messy trip notes. A background job sends the image to Gemini for structured extraction of the destination, dates, and categorized activities, then displays the result in the dashboard's `Create from notes` modal. The user can optionally trigger a DeepSeek call to add more detail and a couple of suggested extra activities. When a matching destination photo is found, Unsplash attribution is attached to the result.
+
+Deliberately, this slice does not include editing, saving, sharing, or exporting the generated itinerary, and it does not provide multi-itinerary history. There are no additional product features behind this flow because the brief limits the scope to one upload-to-result-to-expand path. This project reuses the complete Assessment 1 authentication flow—signup, email verification, signin, forgot/reset password, session management, and the dashboard—rather than a stripped-down or seeded version. That reuse is a deliberate choice and is disclosed here as required by the brief.
 
 ## 2. How To Run It
 
-_To be completed._
+1. Clone the repository, enter the project directory, and install dependencies:
+
+   ```powershell
+   npm install
+   ```
+
+2. Create `.env` from `.env.example` and fill in every variable:
+
+   - `DATABASE_URL` — the local PostgreSQL connection string. The configured project database is `roami_ai` on `localhost:5435`, using the `public` schema.
+   - `SESSION_SECRET` — a self-generated secret, for example `openssl rand -hex 32`.
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_EMAIL`, and `SMTP_FROM_NAME` — the SMTP credentials and sender details used by the reused Assessment 1/2 email-verification flow.
+   - `GEMINI_API_KEY` — a key from [Google AI Studio](https://aistudio.google.com/).
+   - `DEEPSEEK_API_KEY` — a key from [DeepSeek Platform](https://platform.deepseek.com/).
+   - `UNSPLASH_ACCESS_KEY` — an Unsplash application access key from [Unsplash Developers](https://unsplash.com/developers).
+
+   Keep the real API keys only in `.env`; `.env.example` contains commented placeholders for the AI and Unsplash keys.
+
+3. Start the local PostgreSQL instance. The confirmed database is reachable at `localhost:5435`, but Docker is not installed in the environment used to write this documentation, and this repository does not contain a Docker Compose file or a recorded container name. Therefore the exact `docker run` command currently used cannot be confirmed here without guessing. Start PostgreSQL using the local/container setup that exposes port `5435` and provides the `roami_ai` database, then ensure `DATABASE_URL` matches it.
+
+4. Apply the Prisma migrations:
+
+   ```powershell
+   npx prisma migrate dev
+   ```
+
+5. Start the development server:
+
+   ```powershell
+   npm run dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000).
+
+6. No separate signup or seeded-user setup is required. Create a real account through the normal signup screen, complete email verification using the configured SMTP service, and sign in normally. The dashboard then provides the `Create from notes` entry point.
 
 ## 3. The Flow Step By Step
 
