@@ -8,7 +8,7 @@ _To be completed._
 
 ## 3. The Flow Step By Step
 
-1. A signed-in user sends one JPG or PNG image as multipart form data in the `file` field to `POST /api/itinerary/upload`. The endpoint requires the existing database-backed session, enforces the 5-requests-per-user-per-10-minutes upload limit, and rejects empty or oversized files above the configured 10MB limit.
+1. A signed-in user sends one JPG or PNG image as multipart form data in the `file` field to `POST /api/itinerary/upload`. The endpoint requires the existing database-backed session, enforces the 5-requests-per-user-per-10-minutes upload limit, and rejects empty or oversized files above the configured 20MB limit.
 
 2. The endpoint writes the image to the local `uploads/itinerary/<userId>/` folder. The database stores only the generated relative `storageKey`, never the raw image bytes. It creates an `ItineraryJob` with `PENDING`, immediately changes it to `PROCESSING`, starts the background worker without awaiting it, and returns HTTP 202 with the job id right away.
 
@@ -31,7 +31,7 @@ _To be completed._
 
 8. To expand a completed itinerary, the signed-in client sends `POST /api/itinerary/[id]/expand`. The route enforces the 10-requests-per-user-per-10-minutes limit, sends the current structured itinerary to `lib/deepseek.ts`, and uses DeepSeek V4.1 Flash through the official OpenAI SDK with `https://api.deepseek.com` as the overridden base URL. The response is independently validated with Zod and retried once only for schema-validation failure. A successful response updates existing activity notes and appends new activities in one database transaction, so provider, timeout, and validation failures leave the current itinerary unchanged.
 
-9. The authenticated dashboard opens the client `ItineraryModal` from the `Extract from notes` button in the empty-state card. The modal shell switches between upload, processing, result, and failed states: upload previews one JPG/PNG and calls `POST /api/itinerary/upload`; processing polls `GET /api/itinerary/job/[id]` every two seconds; result renders either the Unsplash-attributed photo variant or the no-photo variant and calls `POST /api/itinerary/[id]/expand`; and failed displays the recorded user-safe error with a return-to-upload action. There is no standalone itinerary page route; the flow stays inside the dismissible modal.
+9. The authenticated dashboard opens the client ItineraryModal from the Extract from notes button in the empty-state card. The upload body keeps the selected file preview while the button shows the wave-spinner loading state and cosmetic pacing copy as the client polls GET /api/itinerary/job/[id] every two seconds. A DONE response transitions directly to the result body, which calls POST /api/itinerary/[id]/expand; a FAILED response opens a smaller stacked error overlay above the still-visible upload modal. The old standalone Processing and Failed body screens are no longer used. There is no standalone itinerary page route; the flow stays inside the dismissible modal.
 ## 4. The Data Model
 
 `ItineraryJob` records every uploaded image and tracks the asynchronous extraction lifecycle through `PENDING`, `PROCESSING`, `DONE`, or `FAILED`, including attempts, failure details, and the local filesystem storage key. `Itinerary` stores one successful structured result for a job, including the destination, dates, optional Unsplash photo attribution, and timestamps. `ItineraryActivity` stores the ordered, categorized activities belonging to an itinerary.

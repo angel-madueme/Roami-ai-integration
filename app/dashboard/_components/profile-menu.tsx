@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SignOutButton } from "./sign-out-button";
 
 function AvatarIcon() {
@@ -9,9 +9,23 @@ function AvatarIcon() {
 
 export function ProfileMenu({ fullName, email }: { fullName: string; email: string }) {
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [open]);
 
   return (
-    <div className="relative border-t border-slate-200 pt-4">
+    <div ref={menuRef} className="relative border-t border-slate-200 pt-4">
       <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/70">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100"><AvatarIcon /></span>
         <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-900">{fullName}</span><span className="block truncate text-xs text-slate-500">Free</span></span>

@@ -39,14 +39,6 @@ const categoryStyles: Record<ActivityCategory, { symbol: string; className: stri
   OTHER: { symbol: "◇", className: "bg-pink-50 text-pink-500", label: "Other" },
 };
 
-function friendlyFailure(errorMessage?: string | null): string {
-  if (!errorMessage) return "We couldn’t read that image. Try a clearer photo, or make sure your notes are visible and well-lit.";
-  if (/provider error|schema validation|missing required|at position|deepseek/i.test(errorMessage)) {
-    return "We couldn’t read that image. Try a clearer photo, or make sure your notes are visible and well-lit.";
-  }
-  return errorMessage;
-}
-
 function formatDate(date: string): string {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return date;
@@ -70,7 +62,25 @@ function ActivityIcon({ category }: { category: ActivityCategory }) {
   return <span aria-label={style.label} className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold ${style.className}`}>{style.symbol}</span>;
 }
 
-function UploadScreen({ onStarted }: { onStarted: (jobId: string) => void }) {
+function UploadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" aria-hidden="true">
+      <path d="M7 18.5h10a4.5 4.5 0 0 0 .4-8.98A6 6 0 0 0 5.6 11.4 3.6 3.6 0 0 0 7 18.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 9.5v6M9.5 12 12 9.5l2.5 2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UploadError({ message }: { message: string }) {
+  return (
+    <div role="alert" className="mt-4 flex items-start gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-left">
+      <span className="mt-0.5 shrink-0 text-red-500" aria-hidden="true">!</span>
+      <span className="flex-1 text-sm font-medium text-red-700">{message}</span>
+    </div>
+  );
+}
+
+function UploadScreen({ onStarted, loadingMessage }: { onStarted: (jobId: string) => void; loadingMessage: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -86,8 +96,8 @@ function UploadScreen({ onStarted }: { onStarted: (jobId: string) => void }) {
       setError("Please choose a JPG or PNG image.");
       return;
     }
-    if (nextFile.size > 10 * 1024 * 1024) {
-      setError("That image is larger than 10MB. Please choose a smaller file.");
+    if (nextFile.size > 20 * 1024 * 1024) {
+      setError("That image is larger than 20MB. Please choose a smaller file.");
       return;
     }
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -127,11 +137,8 @@ function UploadScreen({ onStarted }: { onStarted: (jobId: string) => void }) {
   }
 
   return (
-    <Card className="max-w-[820px] px-7 py-10 sm:px-12 sm:py-12">
-      <div className="text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight text-[#101c4d] sm:text-5xl">Turn your notes into a trip</h1>
-        <p className="mx-auto mt-3 max-w-[620px] text-xl leading-8 text-[#7180ad]">Upload a photo of your notes, screenshot, or booking —<br className="hidden sm:block" /> we’ll turn it into an itinerary.</p>
-      </div>
+    <Card className="max-w-[820px] px-7 py-10 text-left sm:px-12 sm:py-12">
+      <p className="text-base text-[#7180ad]">Upload a photo of your notes, screenshot, or booking.</p>
       <div
         role="button"
         tabIndex={0}
@@ -140,11 +147,11 @@ function UploadScreen({ onStarted }: { onStarted: (jobId: string) => void }) {
         onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`mt-9 flex min-h-[242px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors ${dragging ? "border-blue-500 bg-blue-50" : "border-blue-300 bg-[#f7fbff]"}`}
+        className={`mt-6 flex min-h-[242px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition-colors ${dragging ? "border-blue-500 bg-blue-50" : "border-blue-300 bg-[#f7fbff]"}`}
       >
-        <span className="text-6xl leading-none text-blue-500" aria-hidden="true">♧</span>
+        <span className="text-blue-500"><UploadIcon /></span>
         <p className="mt-4 text-xl font-medium text-[#101c4d]">Drag a photo here or <span className="text-blue-600 underline">click to browse</span></p>
-        <p className="mt-1 text-lg text-[#8290b7]">JPG, PNG — up to 10MB</p>
+        <p className="mt-1 text-lg text-[#8290b7]">JPG, PNG — up to 20MB</p>
         <input ref={inputRef} type="file" accept="image/jpeg,image/png" onChange={onInputChange} className="sr-only" />
       </div>
 
@@ -159,9 +166,9 @@ function UploadScreen({ onStarted }: { onStarted: (jobId: string) => void }) {
         </div>
       )}
 
-      {error && <p role="alert" className="mt-4 text-center text-sm font-medium text-red-600">{error}</p>}
+      {error && <UploadError message={error} />}
       <button type="button" disabled={submitting || !file} onClick={submit} className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
-        {submitting ? <><WaveSpinner /> Extracting…</> : <>Extract notes <Arrow /></>}
+        {submitting ? <><WaveSpinner /> {loadingMessage}</> : <>Extract notes <Arrow /></>}
       </button>
     </Card>
   );
@@ -169,16 +176,6 @@ function UploadScreen({ onStarted }: { onStarted: (jobId: string) => void }) {
 
 function WaveSpinner() {
   return <span className="wave-spinner" aria-label="Loading"><i /><i /><i /></span>;
-}
-
-function ProcessingScreen() {
-  return (
-    <Card className="flex min-h-[28rem] flex-col items-center justify-center px-8 text-center">
-      <WaveSpinner />
-      <h1 className="mt-12 text-4xl font-extrabold tracking-tight text-[#101c4d] sm:text-5xl">Reading your notes…</h1>
-      <p className="mt-4 max-w-[500px] text-xl leading-8 text-[#7180ad]">We’re extracting the details and putting<br className="hidden sm:block" /> your itinerary together.</p>
-    </Card>
-  );
 }
 
 function ResultScreen({ itinerary, onExpand, expanding }: { itinerary: Itinerary; onExpand: () => void; expanding: boolean }) {
@@ -218,52 +215,56 @@ function ResultScreen({ itinerary, onExpand, expanding }: { itinerary: Itinerary
   );
 }
 
-function FailedScreen({ message, onTryAgain }: { message: string; onTryAgain: () => void }) {
-  return (
-    <Card className="flex min-h-[600px] max-w-[850px] flex-col items-center justify-center px-8 text-center">
-      <div className="flex h-32 w-32 items-center justify-center rounded-full bg-red-500 text-7xl font-light text-white" aria-hidden="true">×</div>
-      <h1 className="mt-12 text-4xl font-extrabold tracking-tight text-[#101c4d] sm:text-5xl">We couldn’t read that image</h1>
-      <p className="mt-5 max-w-[600px] text-xl leading-8 text-[#7180ad]">{message}</p>
-      <button type="button" onClick={onTryAgain} className="mt-10 w-full max-w-[620px] rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-600 hover:to-blue-700">Try again</button>
-    </Card>
-  );
-}
-
 export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [screen, setScreen] = useState<"upload" | "processing" | "result" | "failed">("upload");
+  const [screen, setScreen] = useState<"upload" | "result">("upload");
   const [jobId, setJobId] = useState<string | null>(null);
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
-  const [failureMessage, setFailureMessage] = useState<string | null>(null);
+  const [errorOverlayOpen, setErrorOverlayOpen] = useState(false);
+  const [uploadKey, setUploadKey] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState("Reading your notes...");
   const [expanding, setExpanding] = useState(false);
   const [expandError, setExpandError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || screen !== "processing" || !jobId) return;
+    if (!open || !jobId || screen !== "upload" || errorOverlayOpen) return;
     let cancelled = false;
     const poll = async () => {
       try {
         const response = await fetch(`/api/itinerary/job/${jobId}`, { cache: "no-store" });
         const data: JobResponse = await response.json();
         if (cancelled) return;
-        if (!response.ok) throw new Error(data.errorMessage ?? "We couldn’t check extraction status.");
+        if (!response.ok) throw new Error(data.errorMessage ?? "We couldn't check extraction status.");
         if (data.status === "DONE" && data.itinerary) {
           setItinerary(data.itinerary);
+          setJobId(null);
           setScreen("result");
         } else if (data.status === "FAILED") {
-          setFailureMessage(friendlyFailure(data.errorMessage));
-          setScreen("failed");
+          setJobId(null);
+          setErrorOverlayOpen(true);
         }
       } catch (pollError) {
         if (!cancelled) {
-          setFailureMessage(pollError instanceof Error ? pollError.message : "We couldn’t check extraction status.");
-          setScreen("failed");
+          setJobId(null);
+          setErrorOverlayOpen(true);
         }
       }
     };
     void poll();
     const interval = window.setInterval(() => void poll(), 2000);
     return () => { cancelled = true; window.clearInterval(interval); };
-  }, [jobId, open, screen]);
+  }, [errorOverlayOpen, jobId, open, screen]);
+
+  useEffect(() => {
+    if (!open || !jobId || screen !== "upload" || errorOverlayOpen) return;
+    const messages = ["Reading your notes...", "Putting your itinerary together...", "Almost done..."];
+    let index = 0;
+    setLoadingMessage(messages[index]);
+    const interval = window.setInterval(() => {
+      index = (index + 1) % messages.length;
+      setLoadingMessage(messages[index]);
+    }, 2800);
+    return () => window.clearInterval(interval);
+  }, [errorOverlayOpen, jobId, open, screen]);
 
   async function expand() {
     if (!itinerary) return;
@@ -272,10 +273,10 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
     try {
       const response = await fetch(`/api/itinerary/${itinerary.id}/expand`, { method: "POST" });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "We couldn’t expand this itinerary.");
+      if (!response.ok) throw new Error(data.error ?? "We couldn't expand this itinerary.");
       setItinerary(data.itinerary);
     } catch (error) {
-      setExpandError(error instanceof Error ? error.message : "We couldn’t expand this itinerary.");
+      setExpandError(error instanceof Error ? error.message : "We couldn't expand this itinerary.");
     } finally {
       setExpanding(false);
     }
@@ -283,35 +284,47 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
 
   if (!open) return null;
 
-  const modalCopy = screen === "upload"
-    ? { title: "Extract from notes", subtitle: "Turn a photo of your travel notes into a structured itinerary." }
-    : screen === "processing"
-      ? { title: "Reading your notes", subtitle: "We’re extracting the details and putting your itinerary together." }
-      : screen === "failed"
-        ? { title: "We couldn’t read that image", subtitle: "Try again with a clearer photo or better-lit notes." }
-        : { title: "Here’s your itinerary", subtitle: "Review your extracted trip details and add more detail when ready." };
+  const closeEverything = () => {
+    setErrorOverlayOpen(false);
+    onClose();
+  };
+  const retryUpload = () => {
+    setErrorOverlayOpen(false);
+    setJobId(null);
+    setUploadKey((value) => value + 1);
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/35 p-4 backdrop-blur-[2px]" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="itinerary-modal-title">
-      <div className="my-4 flex max-h-[calc(100vh-2rem)] w-full max-w-[43rem] flex-col overflow-hidden rounded-3xl bg-white" onClick={(event) => event.stopPropagation()}>
-        <div className="shrink-0 bg-gradient-to-br from-blue-50 to-white px-7 py-7 sm:px-9">
-          <div className="flex items-start justify-between gap-4">
-            <div><h2 id="itinerary-modal-title" className="text-3xl font-extrabold tracking-tight text-slate-900">{modalCopy.title}</h2><p className="mt-2 text-base text-slate-500">{modalCopy.subtitle}</p></div>
-            <button type="button" onClick={onClose} className="rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-white" aria-label="Close">×</button>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/35 p-4 backdrop-blur-[2px]" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="itinerary-modal-title">
+        <div className="my-4 flex max-h-[calc(100vh-2rem)] w-full max-w-[43rem] flex-col overflow-hidden rounded-3xl bg-white" onClick={(event) => event.stopPropagation()}>
+          <div className="shrink-0 bg-gradient-to-br from-blue-50 to-white px-7 py-7 sm:px-9">
+            <div className="flex items-start justify-between gap-4">
+              <div><h2 id="itinerary-modal-title" className="text-3xl font-extrabold tracking-tight text-slate-900">{screen === "upload" ? "Extract from notes" : "Here’s your itinerary"}</h2><p className="mt-2 text-base text-slate-500">{screen === "upload" ? "Turn a photo of your travel notes into a structured itinerary." : "Review your extracted trip details and add more detail when ready."}</p></div>
+              <button type="button" onClick={onClose} className="rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-white" aria-label="Close">×</button>
+            </div>
+          </div>
+          <div className="min-h-0 overflow-y-auto px-6 py-6 sm:px-9 sm:py-7">
+            {screen === "upload" && <UploadScreen key={uploadKey} loadingMessage={loadingMessage} onStarted={(id) => { setLoadingMessage("Reading your notes..."); setJobId(id); }} />}
+            {screen === "result" && itinerary && (
+              <div className="w-full max-w-[760px]">
+                <ResultScreen itinerary={itinerary} onExpand={expand} expanding={expanding} />
+                {expandError && <p role="alert" className="relative z-10 mt-4 text-center text-sm font-medium text-red-600">{expandError}</p>}
+              </div>
+            )}
           </div>
         </div>
-        <div className="min-h-0 overflow-y-auto px-6 py-6 sm:px-9 sm:py-7">
-      {screen === "upload" && <UploadScreen onStarted={(id) => { setJobId(id); setScreen("processing"); }} />}
-      {screen === "processing" && <ProcessingScreen />}
-      {screen === "failed" && <FailedScreen message={failureMessage ?? "We couldn’t read that image. Try again with a clearer photo."} onTryAgain={() => { setJobId(null); setFailureMessage(null); setScreen("upload"); }} />}
-      {screen === "result" && itinerary && (
-        <div className="w-full max-w-[760px]">
-          <ResultScreen itinerary={itinerary} onExpand={expand} expanding={expanding} />
-          {expandError && <p role="alert" className="relative z-10 mt-4 text-center text-sm font-medium text-red-600">{expandError}</p>}
+      </div>
+      {errorOverlayOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[2px]" onClick={closeEverything} role="dialog" aria-modal="true" aria-labelledby="itinerary-error-title">
+          <div className="relative w-full max-w-[26rem] rounded-3xl bg-white p-7 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <button type="button" onClick={closeEverything} className="absolute right-5 top-4 rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-slate-50" aria-label="Close">×</button>
+            <h2 id="itinerary-error-title" className="pr-10 text-3xl font-extrabold tracking-tight text-slate-900">We couldn't read that image</h2>
+            <p className="mt-2 text-base text-slate-500">Try again with a clearer photo or better-lit notes.</p>
+            <button type="button" onClick={retryUpload} className="mt-7 w-full rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-3.5 text-lg font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-600 hover:to-blue-700">Try again</button>
+          </div>
         </div>
       )}
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
