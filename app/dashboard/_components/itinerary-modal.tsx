@@ -178,7 +178,7 @@ function UploadScreen({ onStarted, loadingMessage }: { onStarted: (jobId: string
       )}
 
       {error && <UploadError message={error} />}
-      <button type="button" disabled={submitting || !file} onClick={submit} className="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+      <button type="button" disabled={submitting || !file} onClick={submit} className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
         {submitting ? <><WaveSpinner /> {loadingMessage}</> : <>Extract notes <Arrow /></>}
       </button>
     </Card>
