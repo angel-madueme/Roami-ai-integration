@@ -2,6 +2,7 @@
 
 import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 import { AI_CONFIG } from "@/lib/ai-config";
+import { BedDouble, Camera, Plane, Star, Utensils } from "lucide-react";
 
 type ActivityCategory = "TRANSPORT" | "LODGING" | "FOOD" | "SIGHTSEEING" | "OTHER";
 
@@ -37,7 +38,7 @@ const categoryStyles: Record<ActivityCategory, { className: string; label: strin
   LODGING: { className: "bg-violet-50 text-violet-600", label: "Lodging" },
   FOOD: { className: "bg-orange-50 text-orange-500", label: "Food" },
   SIGHTSEEING: { className: "bg-emerald-50 text-emerald-600", label: "Sightseeing" },
-  OTHER: { className: "bg-slate-100 text-slate-600", label: "Other" },
+  OTHER: { className: "bg-pink-50 text-pink-500", label: "Other" },
 };
 function formatDate(date: string): string {
   const parsed = new Date(date);
@@ -59,17 +60,19 @@ function Arrow() {
 
 function ActivityIcon({ category }: { category: ActivityCategory }) {
   const style = categoryStyles[category] ?? categoryStyles.OTHER;
-  const icon = {
-    TRANSPORT: <><path d="m4 12 16-5-4.5 5L20 17 4 12Z" /><path d="M8 12 5 7.5M8 12 5 16.5" /></>,
-    LODGING: <><path d="M4 17v-6.5A2.5 2.5 0 0 1 6.5 8h2A2.5 2.5 0 0 1 11 10.5V17" /><path d="M11 12h5.5A3.5 3.5 0 0 1 20 15.5V17M4 14h16M4 17v2M20 17v2" /></>,
-    FOOD: <><path d="M6 4v7M4 4v4a2 2 0 0 0 4 0V4M6 11v9" /><path d="M15 4v16M15 4c2.2 1.2 3.5 3.1 3.5 5.5H15" /></>,
-    SIGHTSEEING: <><path d="M4 9.5 12 4l8 5.5V20H4V9.5Z" /><path d="M8 20v-5h8v5M9 9h.01M12 9h.01M15 9h.01" /></>,
-    OTHER: <><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></>,
-  }[category] ?? <><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" /></>;
+  const Icon = category === "TRANSPORT"
+    ? Plane
+    : category === "FOOD"
+      ? Utensils
+      : category === "LODGING"
+        ? BedDouble
+        : category === "SIGHTSEEING"
+          ? Camera
+          : Star;
 
   return (
     <span aria-label={style.label} className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${style.className}`}>
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icon}</svg>
+      <Icon className="h-6 w-6" strokeWidth={1.8} aria-hidden="true" />
     </span>
   );
 }
@@ -139,10 +142,10 @@ function UploadScreen({ onStarted, loadingMessage }: { onStarted: (jobId: string
       formData.append("file", file);
       const response = await fetch("/api/itinerary/upload", { method: "POST", body: formData });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "We couldn’t start itinerary extraction.");
+      if (!response.ok) throw new Error(data.error ?? "We couldn’t start itinerary creation.");
       onStarted(data.id);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "We couldn’t start itinerary extraction.");
+      setError(submitError instanceof Error ? submitError.message : "We couldn’t start itinerary creation.");
       setSubmitting(false);
     }
   }
@@ -179,7 +182,7 @@ function UploadScreen({ onStarted, loadingMessage }: { onStarted: (jobId: string
 
       {error && <UploadError message={error} />}
       <button type="button" disabled={submitting || !file} onClick={submit} className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
-        {submitting ? <><WaveSpinner /> {loadingMessage}</> : <>Extract notes <Arrow /></>}
+        {submitting ? <><WaveSpinner /> {loadingMessage}</> : <>Create itinerary <Arrow /></>}
       </button>
     </Card>
   );
@@ -215,7 +218,7 @@ function ResultScreen({ itinerary, onExpand, expanding, detailsVisible }: { itin
       </div>
       <div className="mt-8 pt-7">
         <button type="button" onClick={onExpand} disabled={expanding} className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-blue-500 py-3.5 text-xl font-medium text-blue-600 transition hover:bg-blue-50 disabled:cursor-wait disabled:opacity-70">
-          {expanding ? <><WaveSpinner /> Loading...</> : detailsVisible ? "See less" : "See details"}
+          {expanding ? <><WaveSpinner /> Loading...</> : detailsVisible ? "Hide details" : "Add details"}
         </button>
       </div>
     </Card>
@@ -241,7 +244,7 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
         const response = await fetch(`/api/itinerary/job/${jobId}`, { cache: "no-store" });
         const data: JobResponse = await response.json();
         if (cancelled) return;
-        if (!response.ok) throw new Error(data.errorMessage ?? "We couldn't check extraction status.");
+        if (!response.ok) throw new Error(data.errorMessage ?? "We couldn't check itinerary status.");
         if (data.status === "DONE" && data.itinerary) {
           setItinerary(data.itinerary);
           setJobId(null);
@@ -315,7 +318,7 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
         <div className="my-4 flex max-h-[calc(100vh-2rem)] w-full max-w-[43rem] flex-col overflow-hidden rounded-3xl bg-white" onClick={(event) => event.stopPropagation()}>
           <div className="shrink-0 bg-gradient-to-br from-blue-50 to-white px-7 py-7 sm:px-9">
             <div className="flex items-start justify-between gap-4">
-              <div><h2 id="itinerary-modal-title" className="text-3xl font-extrabold tracking-tight text-slate-900">{screen === "upload" ? "Extract from notes" : "Here’s your itinerary"}</h2><p className="mt-2 text-base text-slate-500">{screen === "upload" ? "Turn a photo of your travel notes into a structured itinerary." : "Add more detail and a few extra ideas for your trip."}</p></div>
+              <div><h2 id="itinerary-modal-title" className="text-3xl font-extrabold tracking-tight text-slate-900">{screen === "upload" ? "Create from notes" : "Here’s your itinerary"}</h2><p className="mt-2 text-base text-slate-500">{screen === "upload" ? "Turn a photo of your travel notes into a structured itinerary." : "Review your itinerary and add a few extra ideas."}</p></div>
               <button type="button" onClick={onClose} className="rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-white" aria-label="Close">×</button>
             </div>
           </div>
@@ -332,10 +335,10 @@ export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () =
       </div>
       {errorOverlayOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[2px]" onClick={closeEverything} role="dialog" aria-modal="true" aria-labelledby="itinerary-error-title">
-          <div className="relative w-full max-w-[26rem] rounded-3xl bg-white px-9 py-9 text-center shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="relative w-full max-w-[34.5rem] rounded-3xl bg-white px-9 py-9 text-center shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <button type="button" onClick={closeEverything} className="absolute right-5 top-4 rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-slate-50" aria-label="Close">×</button>
-            <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-red-500 text-6xl font-light leading-none text-white" aria-hidden="true">×</div>
-            <h2 id="itinerary-error-title" className="mt-8 text-[2.25rem] font-extrabold leading-tight tracking-tight text-slate-900">We couldn't read that image</h2>
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-500 text-white" aria-hidden="true"><svg viewBox="0 0 24 24" className="h-7 w-7" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" /><path d="M12 7.5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><circle cx="12" cy="16" r="1" fill="currentColor" /></svg></div>
+            <h2 id="itinerary-error-title" className="mt-8 text-[1.875rem] font-extrabold leading-tight tracking-tight text-slate-900">We couldn't read that image</h2>
             <p className="mt-5 text-[1.2rem] leading-8 text-slate-500">Try again with a clearer photo or better-lit notes.</p>
             <button type="button" onClick={retryUpload} className="mt-9 w-full rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-3.5 text-lg font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-600 hover:to-blue-700">Try again</button>
           </div>

@@ -139,7 +139,7 @@ export default function DashboardClient({ fullName, email }: { fullName: string;
                 onClick={() => setItineraryOpen(true)}
                 className="rounded-xl border border-blue-500 bg-white px-6 py-3 text-sm font-semibold text-blue-600 shadow-sm transition-colors hover:bg-blue-50"
               >
-                Extract from notes
+                Create from notes
               </button>
             </div>
           </div>
