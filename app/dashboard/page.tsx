@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { requireVerifiedUser } from "@/lib/auth-guard";
 import { SignOutButton } from "./_components/sign-out-button";
 
@@ -126,12 +127,12 @@ export default async function DashboardPage() {
               </h1>
               <p className="mt-1 text-slate-500">Start planning your next getaway.</p>
             </div>
-            <button
-              type="button"
+            <Link
+              href="/itinerary"
               className="rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors enabled:hover:from-blue-600 enabled:hover:to-blue-700"
             >
               Plan your first trip
-            </button>
+            </Link>
           </div>
 
           <div className="mt-8 flex flex-col items-center rounded-2xl border border-slate-100 px-6 py-16 text-center">
@@ -148,12 +149,12 @@ export default async function DashboardPage() {
               Create your first trip to keep your destination, stay, and
               activities in one place.
             </p>
-            <button
-              type="button"
+            <Link
+              href="/itinerary"
               className="mt-6 rounded-xl bg-gradient-to-b from-blue-500 to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors enabled:hover:from-blue-600 enabled:hover:to-blue-700"
             >
               Plan your first trip
-            </button>
+            </Link>
           </div>
         </main>
       </div>
