@@ -18,7 +18,7 @@ Deliberately not included: no editing, sharing, or exporting of the generated it
 - Language: TypeScript
 - ORM: Prisma
 - Database: PostgreSQL (a dedicated database for this project, separate from Assessment 1 and 2's)
-- Vision/extraction model: Google Gemini (official Google SDK), chosen for its vision capability — it reads the uploaded photo directly and returns structured JSON.
+- Vision/extraction model: Google Gemini 3 Flash Preview (`gemini-3-flash-preview`, official Google SDK), chosen for its multimodal vision capability — it reads the uploaded photo directly and returns structured JSON. Gemini 2.5 Flash was the original plan, but it was inaccessible to new API keys as of this build; Gemini 3 Flash Preview was substituted as Google’s documented direct replacement.
 - Text/follow-up model: DeepSeek, called via the official OpenAI SDK pointed at DeepSeek's API endpoint (DeepSeek's API is OpenAI-compatible) — chosen because the follow-up action is text-only and doesn't need vision, so a separate, simpler model handles it.
 - Image search: Unsplash API, used to fetch a real photo matching the extracted destination name. This is not an AI model call — it's a straightforward search-and-fetch, used to add a genuine, non-AI third-party API integration to the build, disclosed here as a deliberate learning choice beyond the assessment's minimum requirement.
 - Validation: Zod, for validating structured output from both models before it's trusted or stored.
@@ -74,7 +74,7 @@ The GitHub repository (`Roami-ai-integration`, separate git history from Assessm
 
 ## 11. Resolved decisions
 
-1. **Model versions:** Gemini 2.5 Flash is used for extraction. Gemini 2.0 Flash was deprecated in June 2026 and is no longer available. DeepSeek V4.1 Flash is used for the expand action, accessed via the OpenAI SDK pointed at `api.deepseek.com`.
+1. **Model versions:** Gemini 2.5 Flash was the original extraction plan, but as of September 23, 2026 it is inaccessible to new API keys even though its official shutdown date has not arrived. The provider returned a 404 directing new projects to Gemini 3 Flash Preview, so `gemini-3-flash-preview` was substituted as Google’s documented direct replacement. It supports multimodal image input and structured outputs. DeepSeek V4.1 Flash is used for the expand action, accessed via the OpenAI SDK pointed at `api.deepseek.com`.
 
 2. **Background job mechanism:** An async function is triggered immediately after the upload endpoint responds. No separate queue library or external service (such as Redis or BullMQ) is used. This assessment targets a single-instance local/demo deployment, so a full queue system would add infrastructure this slice does not need. Known limitation: jobs in flight do not survive a server restart; this is documented in Section 7.
 
@@ -87,7 +87,7 @@ The GitHub repository (`Roami-ai-integration`, separate git history from Assessm
 6. **Retry policy for invalid structured output:** If the first response is successful but fails schema validation, the same input is retried once. If the retry also fails validation, the job is marked `FAILED` with the validation error recorded in `errorMessage`. There is no retry on a timeout or provider error (5xx); retries apply only to successful responses that fail schema validation.
 
 7. **Cost model (current pricing as of September 2026):**
-   - **Gemini 2.5 Flash:** $0.30 per 1M input tokens and $2.50 per 1M output tokens. One extraction call (image plus prompt as input, approximately 1,500 tokens; structured JSON output, approximately 300 tokens) costs approximately $0.0012 per run.
+   - **Gemini 3 Flash Preview (`gemini-3-flash-preview`):** $0.50 per 1M input tokens and $3.00 per 1M output tokens, according to Google’s pricing documented for this model as of September 23, 2026. One extraction call (image plus prompt as input, approximately 1,500 tokens; structured JSON output, approximately 300 tokens) costs approximately $0.00165 per run. Gemini 2.5 Flash’s original pricing is no longer the applicable estimate because that model is inaccessible to the new API key used for this build.
    - **DeepSeek V4.1 Flash:** $0.15 per 1M input tokens and $0.60 per 1M output tokens at the off-peak rate. One expand call (approximately 800 input tokens and 500 output tokens) costs approximately $0.0004 per run.
-   - A full flow (one extraction plus one expand) costs approximately $0.0016, under two-tenths of a cent. Given Gemini’s free tier and DeepSeek’s 5-million-token free grant for new accounts, actual cost during this assessment’s development and testing is expected to be $0.
+   - A full flow (one extraction plus one expand) costs approximately $0.00205, just over two-tenths of a cent. Given Gemini’s free tier and DeepSeek’s 5-million-token free grant for new accounts, actual cost during this assessment’s development and testing is expected to be $0.
    - No hard spend cap is implemented for this assessment’s scope. The rate limits in point 4 are the practical ceiling on potential spend in a given window.

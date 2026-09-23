@@ -4,8 +4,8 @@
  */
 export const AI_CONFIG = {
   gemini: {
-    model: "gemini-2.5-flash",
-    maxOutputTokens: 1024,
+    model: "gemini-3-flash-preview",
+    maxOutputTokens: 4096,
     // Low temperature keeps extraction deterministic and factual.
     temperature: 0.1,
     timeoutMs: 30_000,
