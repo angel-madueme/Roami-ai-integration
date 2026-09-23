@@ -108,12 +108,45 @@ What I chose against: an explicit hard dollar cap on total spend (e.g. shutting 
 
 ## 6. What Went Wrong
 
-_To be completed._
+### Nested git repository from the Assessment 1 copy
+
+Symptom: git operations behaved unpredictably during initial setup.
+
+Investigation: the copied Assessment 1 project had been placed as a subfolder inside this project's root rather than flattened into it, complete with its own `.git` directory. This briefly meant the project contained two separate git repositories, one nested inside the other.
+
+Cause: the copy step preserved the source project's internal structure and `.git` folder instead of merging its contents directly into this project's root.
+
+Fix: every file was moved up one level to this project's actual root, the nested folder and its `.git` directory were deleted entirely, and only one git repository was confirmed before git setup.
+
+### Database connection failure during the schema/scaffold step
+
+Symptom: Prisma reported that it could not reach a database server on the port configured in `.env`.
+
+Investigation: the Prisma schema and migration files were correct; the actual problem was that no Postgres container was running at all, which was an oversight in setup order.
+
+Cause: `.env` was pointing at a port with nothing listening on it locally.
+
+Fix: a dedicated Postgres container was started on a fresh port not already used by the other Roami assessment projects, and `.env` was updated to match.
+
+### Gemini model unavailability
+
+Symptom: the extraction call returned a 404 for `gemini-2.5-flash` with the message "no longer available to new users," despite the model's official documented shutdown date not having arrived yet.
+
+Investigation: this was not a code or configuration bug; the same request structure worked once a different model identifier was used.
+
+Cause: Google restricts new API keys from accessing the 2.5 model series ahead of its formal deprecation date, even though existing keys with prior usage retain access. That distinction was not obvious from the model's public documentation alone.
+
+Fix: the project switched to `gemini-3-flash-preview`, Google's own documented direct replacement for `gemini-2.5-flash`, and the PRD, `AGENTS.md`, and cost model were updated to reflect the actual model in use.
 
 ## 7. What This Slice Does Not Handle
 
-_To be completed._
+- Background jobs do not survive a server restart, since no external queue such as Redis or BullMQ is used, per the deliberate scope decision in PRD Section 11. A job in `PROCESSING` when the server restarts is left in that state indefinitely.
+- There is no hard spend cap on AI usage beyond the rate limits already described.
+- There is no retry on Gemini or DeepSeek timeouts or provider errors. Retries apply only to schema-validation failures, per the documented retry policy.
+- There is no multi-itinerary history, editing, sharing, or export. This slice is strictly one upload-to-result-to-expand flow, per PRD Section 6.
+- Uploaded images use local filesystem storage, not real cloud object storage. This is documented as the local-development equivalent per PRD Section 11, meaning uploaded files do not survive deployment to a different host without additional work.
+- The Unsplash no-result path is implemented and handles failures and empty results gracefully, but it was not exercised against a confirmed real destination with no available photos during testing.
 
 ## 8. If I Built This Again
 
-_To be completed._
+The biggest change would be checking model availability for new API keys before locking a specific model identifier into the PRD and `AGENTS.md`. The Gemini 404 cost real time mid-build because the model chosen during planning turned out to be inaccessible the moment a fresh key was used against it, a distinction the public deprecation timeline did not surface. A five-minute test call with the actual new key, before writing the model name into governing documents, would have caught this before it became a live blocker.
