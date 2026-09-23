@@ -14,26 +14,18 @@ _To be completed._
 
 3. The client polls `GET /api/itinerary/job/[id]` with the same authenticated session. The endpoint scopes the lookup by both job id and requesting user id, so another user’s job is never returned. `PROCESSING` returns the current status and attempts; `DONE` includes the full `Itinerary` and ordered `ItineraryActivity` records; `FAILED` includes `errorMessage`.
 
-4. For this API-only stub, the worker runs behind the in-memory Gemini concurrency cap, increments the job attempts, waits briefly to simulate processing, and alternates between a successful fake itinerary with two activities and a recorded failure. This makes both `DONE` and `FAILED` polling paths testable before the real Gemini call is added.
+4. The background worker reads the uploaded image from the job’s `storageKey` and passes it to `lib/gemini.ts`. That client uses Google’s official Gemini SDK with Gemini 2.5 Flash, the configured 30-second timeout, temperature, and output-token cap. Its system prompt requests only the structured itinerary JSON and Gemini receives an explicit JSON response schema for the destination, ISO dates, activity categories, titles, and notes.
 
-5. A curl-equivalent upload is:
+5. The worker parses Gemini’s raw JSON response and validates it independently with the Zod itinerary schema. A successful response that fails validation is sent through exactly one retry with the same input. A second validation failure marks the job `FAILED` and records the validation error; timeout and provider errors are marked failed without retry. A valid response creates the `Itinerary` and ordered `ItineraryActivity` rows, then marks the job `DONE`.
 
-   ```bash
-   curl -i -X POST http://localhost:3000/api/itinerary/upload \
-     -H "Cookie: roami_session=<signed-session-cookie>" \
-     -F "file=@./trip-notes.jpg"
-   ```
-
-   The immediate response is HTTP 202 with a body such as `{ "id": "<job-id>", "status": "PROCESSING" }`; it does not wait for the worker.
-
-6. Poll the returned job id:
+6. Poll the returned job id while the worker runs:
 
    ```bash
    curl -i http://localhost:3000/api/itinerary/job/<job-id> \
      -H "Cookie: roami_session=<signed-session-cookie>"
    ```
 
-   The first response is normally `PROCESSING`, followed shortly by either `DONE` with the fake itinerary and activities or `FAILED` with the test error message. The upload and job-status endpoints are API-only in this step; no new UI is included.
+   The upload response is immediate and contains `{ "id": "<job-id>", "status": "PROCESSING" }`. A later poll returns `DONE` with the persisted itinerary and activities, or `FAILED` with the recorded timeout, provider, or validation error.
 ## 4. The Data Model
 
 `ItineraryJob` records every uploaded image and tracks the asynchronous extraction lifecycle through `PENDING`, `PROCESSING`, `DONE`, or `FAILED`, including attempts, failure details, and the local filesystem storage key. `Itinerary` stores one successful structured result for a job, including the destination, dates, optional Unsplash photo attribution, and timestamps. `ItineraryActivity` stores the ordered, categorized activities belonging to an itinerary.
@@ -41,8 +33,13 @@ _To be completed._
 The `Itinerary.jobId` unique constraint enforces one itinerary per job, preventing a single upload job from somehow producing two itinerary records. Foreign-key relations connect jobs to users and itineraries to jobs and activities, while the activity `order` value preserves display sequence.
 ## 5. The Concepts
 
-_To be completed._
+### Structured output and schema validation
 
+Structured output means Gemini is asked for a JSON object matching an explicit itinerary schema: destination, ISO start and end dates, and categorized activities with a title and note. This is needed because trusting a 200 response without validating its shape means a malformed or incomplete response could silently corrupt the itinerary or crash downstream code that expects fields which are not there.
+
+`lib/gemini.ts` requests Gemini’s JSON response mode and response schema. `lib/itinerary-job.ts` independently parses the returned JSON and validates it with Zod before any database rows are created. If a successful response fails validation, the same input is retried once; if validation fails again, the job is marked `FAILED` with the validation error. Timeouts and provider errors are not retried.
+
+This was chosen instead of trusting the model’s own schema enforcement alone. The model-side schema guides generation, while application-side Zod validation is the independent safety boundary before data is persisted.
 ## 6. What Went Wrong
 
 _To be completed._

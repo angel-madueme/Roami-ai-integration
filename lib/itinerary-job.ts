@@ -1,74 +1,135 @@
+import { readFile } from "fs/promises";
+import path from "path";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withGeminiConcurrency } from "@/lib/concurrency";
-import { AI_CONFIG } from "@/lib/ai-config";
+import { extractItineraryWithGemini, GeminiTimeoutError } from "@/lib/gemini";
 
-let stubInvocationCount = 0;
+const extractionPrompt = `
+You are Roami's itinerary extraction model. Read the uploaded travel-notes image and return only the structured JSON requested by the response schema.
 
-const STUB_FAILURE_MESSAGE = "Temporary stub extraction failure for test coverage.";
+Extract the destination, start date, end date, and every identifiable activity. Dates must be ISO dates in YYYY-MM-DD format. Categorize each activity as exactly one of TRANSPORT, LODGING, FOOD, SIGHTSEEING, or OTHER. Preserve uncertainty honestly in the note rather than inventing details. If a value cannot be identified, return the required field with an empty string or an empty activities array rather than adding prose outside the JSON object.
+`;
 
-function sleep(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+const itineraryExtractionSchema = z.object({
+  destination: z.string().min(1),
+  startDate: z.iso.date(),
+  endDate: z.iso.date(),
+  activities: z.array(
+    z.object({
+      category: z.enum(["TRANSPORT", "LODGING", "FOOD", "SIGHTSEEING", "OTHER"]),
+      title: z.string().min(1),
+      note: z.string(),
+    })
+  ),
+});
+
+type ValidatedItinerary = z.infer<typeof itineraryExtractionSchema>;
+
+function storagePathFromKey(storageKey: string): { path: string; mimeType: string } {
+  const match = /^uploads\/itinerary\/([^/]+)\/([^/]+\.(jpg|png))$/i.exec(storageKey);
+  if (!match) throw new Error("Invalid itinerary storage key.");
+
+  const filename = match[2];
+  const mimeType = match[3].toLowerCase() === "png" ? "image/png" : "image/jpeg";
+  return {
+    path: path.join(process.cwd(), "uploads", "itinerary", match[1], filename),
+    mimeType,
+  };
 }
 
-/**
- * Runs the temporary extraction worker for one job. The worker alternates
- * between DONE and FAILED so both API paths can be tested before Gemini is wired.
- */
+function validationErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Gemini returned invalid itinerary data.";
+}
+
+async function markFailed(jobId: string, errorMessage: string): Promise<void> {
+  await prisma.itineraryJob.update({
+    where: { id: jobId },
+    data: { status: "FAILED", errorMessage },
+  });
+}
+
+async function processJob(jobId: string): Promise<void> {
+  const job = await prisma.itineraryJob.findUnique({ where: { id: jobId } });
+  if (!job) return;
+
+  const storedImage = storagePathFromKey(job.storageKey);
+  const image = await readFile(/* turbopackIgnore: true */ storedImage.path);
+
+  await prisma.itineraryJob.update({
+    where: { id: jobId },
+    data: { attempts: { increment: 1 } },
+  });
+
+  let validated: ValidatedItinerary | null = null;
+  let lastValidationError: unknown;
+
+  for (let validationAttempt = 0; validationAttempt < 2; validationAttempt += 1) {
+    let rawResponse: string;
+    try {
+      rawResponse = await extractItineraryWithGemini({
+        image,
+        mimeType: storedImage.mimeType,
+        prompt: extractionPrompt,
+      });
+      console.info("Gemini raw itinerary response:", rawResponse);
+    } catch (error) {
+      if (error instanceof GeminiTimeoutError) {
+        await markFailed(jobId, "The AI service took too long to respond. Please try again.");
+        return;
+      }
+      const message = error instanceof Error ? error.message : "Gemini provider error.";
+      await markFailed(jobId, `Gemini provider error: ${message}`);
+      return;
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(rawResponse);
+      validated = itineraryExtractionSchema.parse(parsed);
+      console.info("Validated itinerary result:", JSON.stringify(validated));
+      break;
+    } catch (error) {
+      lastValidationError = error;
+    }
+  }
+
+  if (!validated) {
+    await markFailed(jobId, `Gemini response failed schema validation: ${validationErrorMessage(lastValidationError)}`);
+    return;
+  }
+
+  await prisma.itinerary.create({
+    data: {
+      jobId,
+      destination: validated.destination,
+      startDate: new Date(`${validated.startDate}T00:00:00.000Z`),
+      endDate: new Date(`${validated.endDate}T00:00:00.000Z`),
+      activities: {
+        create: validated.activities.map((activity, index) => ({
+          category: activity.category,
+          title: activity.title,
+          note: activity.note,
+          order: index,
+        })),
+      },
+    },
+  });
+
+  await prisma.itineraryJob.update({
+    where: { id: jobId },
+    data: { status: "DONE", errorMessage: null },
+  });
+}
+
+/** Runs real Gemini extraction behind the configured in-memory concurrency cap. */
 export function runItineraryExtractionJob(jobId: string): void {
   void withGeminiConcurrency(async () => {
     try {
-      await prisma.itineraryJob.update({
-        where: { id: jobId },
-        data: { attempts: { increment: 1 } },
-      });
-
-      await sleep(AI_CONFIG.upload.stubDelayMs);
-      stubInvocationCount += 1;
-
-      if (stubInvocationCount % 2 === 0) {
-        await prisma.itinerary.create({
-          data: {
-            jobId,
-            destination: "Lagos, Nigeria",
-            startDate: new Date("2026-10-10T00:00:00.000Z"),
-            endDate: new Date("2026-10-14T00:00:00.000Z"),
-            activities: {
-              create: [
-                {
-                  category: "SIGHTSEEING",
-                  title: "Explore Lekki Conservation Centre",
-                  note: "Walk the canopy bridge and explore the nature trails.",
-                  order: 0,
-                },
-                {
-                  category: "FOOD",
-                  title: "Try local Lagos cuisine",
-                  note: "Plan a meal featuring local dishes during the stay.",
-                  order: 1,
-                },
-              ],
-            },
-          },
-        });
-
-        await prisma.itineraryJob.update({
-          where: { id: jobId },
-          data: { status: "DONE", errorMessage: null },
-        });
-        return;
-      }
-
-      await prisma.itineraryJob.update({
-        where: { id: jobId },
-        data: { status: "FAILED", errorMessage: STUB_FAILURE_MESSAGE },
-      });
+      await processJob(jobId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected extraction failure.";
       try {
-        await prisma.itineraryJob.update({
-          where: { id: jobId },
-          data: { status: "FAILED", errorMessage: message },
-        });
+        await markFailed(jobId, message);
       } catch (updateError) {
         console.error("Failed to mark itinerary job as FAILED:", updateError);
       }
