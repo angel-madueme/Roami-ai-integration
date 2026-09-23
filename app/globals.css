@@ -24,3 +24,39 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.wave-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 1.25rem;
+}
+
+.wave-spinner i {
+  display: block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: #3b82f6;
+  animation: roami-wave 0.9s ease-in-out infinite;
+}
+
+.wave-spinner i:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.wave-spinner i:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+@keyframes roami-wave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.65;
+  }
+
+  30% {
+    transform: translateY(-0.35rem);
+    opacity: 1;
+  }
+}

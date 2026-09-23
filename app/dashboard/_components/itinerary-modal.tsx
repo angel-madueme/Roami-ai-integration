@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 
 type ActivityCategory = "TRANSPORT" | "LODGING" | "FOOD" | "SIGHTSEEING" | "OTHER";
 
@@ -57,12 +57,8 @@ function formatDateRange(startDate: string, endDate: string): string {
   return `${formatDate(startDate)} → ${formatDate(endDate)}`;
 }
 
-function Header() {
-  return <div className="absolute left-7 top-7 z-10 text-3xl font-extrabold tracking-tight text-[#101c4d] sm:left-10 sm:top-8">Roami</div>;
-}
-
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`relative z-10 w-full rounded-[28px] bg-white shadow-[0_24px_70px_rgba(57,116,190,0.18)] ${className}`}>{children}</div>;
+  return <div className={`w-full ${className}`}>{children}</div>;
 }
 
 function Arrow() {
@@ -165,20 +161,20 @@ function UploadScreen({ onStarted }: { onStarted: (jobId: string) => void }) {
 
       {error && <p role="alert" className="mt-4 text-center text-sm font-medium text-red-600">{error}</p>}
       <button type="button" disabled={submitting || !file} onClick={submit} className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 py-4 text-xl font-semibold text-white shadow-lg shadow-blue-500/20 transition enabled:hover:from-blue-600 enabled:hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
-        {submitting ? "Starting extraction…" : "Extract notes"} {!submitting && <Arrow />}
+        {submitting ? <><WaveSpinner /> Extracting…</> : <>Extract notes <Arrow /></>}
       </button>
     </Card>
   );
 }
 
+function WaveSpinner() {
+  return <span className="wave-spinner" aria-label="Loading"><i /><i /><i /></span>;
+}
+
 function ProcessingScreen() {
   return (
-    <Card className="flex min-h-[600px] max-w-[820px] flex-col items-center justify-center px-8 text-center">
-      <div className="flex items-center gap-5" aria-label="Processing">
-        <span className="h-8 w-8 rounded-full bg-blue-300" />
-        <span className="h-10 w-10 rounded-full bg-blue-600" />
-        <span className="h-8 w-8 rounded-full bg-blue-300" />
-      </div>
+    <Card className="flex min-h-[28rem] flex-col items-center justify-center px-8 text-center">
+      <WaveSpinner />
       <h1 className="mt-12 text-4xl font-extrabold tracking-tight text-[#101c4d] sm:text-5xl">Reading your notes…</h1>
       <p className="mt-4 max-w-[500px] text-xl leading-8 text-[#7180ad]">We’re extracting the details and putting<br className="hidden sm:block" /> your itinerary together.</p>
     </Card>
@@ -233,7 +229,7 @@ function FailedScreen({ message, onTryAgain }: { message: string; onTryAgain: ()
   );
 }
 
-export function ItineraryFlow() {
+export function ItineraryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [screen, setScreen] = useState<"upload" | "processing" | "result" | "failed">("upload");
   const [jobId, setJobId] = useState<string | null>(null);
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
@@ -242,7 +238,7 @@ export function ItineraryFlow() {
   const [expandError, setExpandError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (screen !== "processing" || !jobId) return;
+    if (!open || screen !== "processing" || !jobId) return;
     let cancelled = false;
     const poll = async () => {
       try {
@@ -267,7 +263,7 @@ export function ItineraryFlow() {
     void poll();
     const interval = window.setInterval(() => void poll(), 2000);
     return () => { cancelled = true; window.clearInterval(interval); };
-  }, [jobId, screen]);
+  }, [jobId, open, screen]);
 
   async function expand() {
     if (!itinerary) return;
@@ -285,11 +281,26 @@ export function ItineraryFlow() {
     }
   }
 
-  const background = useMemo(() => ({ backgroundImage: "url('/images/sky-background.png')" }), []);
+  if (!open) return null;
+
+  const modalCopy = screen === "upload"
+    ? { title: "Extract from notes", subtitle: "Turn a photo of your travel notes into a structured itinerary." }
+    : screen === "processing"
+      ? { title: "Reading your notes", subtitle: "We’re extracting the details and putting your itinerary together." }
+      : screen === "failed"
+        ? { title: "We couldn’t read that image", subtitle: "Try again with a clearer photo or better-lit notes." }
+        : { title: "Here’s your itinerary", subtitle: "Review your extracted trip details and add more detail when ready." };
 
   return (
-    <main style={background} className="relative flex min-h-screen items-center justify-center overflow-y-auto bg-cover bg-center px-4 py-24 sm:px-8">
-      <Header />
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/35 p-4 backdrop-blur-[2px]" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="itinerary-modal-title">
+      <div className="my-4 flex max-h-[calc(100vh-2rem)] w-full max-w-[43rem] flex-col overflow-hidden rounded-3xl bg-white" onClick={(event) => event.stopPropagation()}>
+        <div className="shrink-0 bg-gradient-to-br from-blue-50 to-white px-7 py-7 sm:px-9">
+          <div className="flex items-start justify-between gap-4">
+            <div><h2 id="itinerary-modal-title" className="text-3xl font-extrabold tracking-tight text-slate-900">{modalCopy.title}</h2><p className="mt-2 text-base text-slate-500">{modalCopy.subtitle}</p></div>
+            <button type="button" onClick={onClose} className="rounded-lg px-2 text-4xl leading-none text-blue-900/70 hover:bg-white" aria-label="Close">×</button>
+          </div>
+        </div>
+        <div className="min-h-0 overflow-y-auto px-6 py-6 sm:px-9 sm:py-7">
       {screen === "upload" && <UploadScreen onStarted={(id) => { setJobId(id); setScreen("processing"); }} />}
       {screen === "processing" && <ProcessingScreen />}
       {screen === "failed" && <FailedScreen message={failureMessage ?? "We couldn’t read that image. Try again with a clearer photo."} onTryAgain={() => { setJobId(null); setFailureMessage(null); setScreen("upload"); }} />}
@@ -299,6 +310,8 @@ export function ItineraryFlow() {
           {expandError && <p role="alert" className="relative z-10 mt-4 text-center text-sm font-medium text-red-600">{expandError}</p>}
         </div>
       )}
-    </main>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -17,7 +17,7 @@ function SignOutIcon() {
   );
 }
 
-export function SignOutButton() {
+export function SignOutButton({ variant = "icon" }: { variant?: "icon" | "menu" }) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -40,9 +40,10 @@ export function SignOutButton() {
       disabled={signingOut}
       aria-label="Sign out"
       title="Sign out"
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+      className={variant === "menu" ? "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left font-semibold text-slate-800 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1" : "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"}
     >
       <SignOutIcon />
+      {variant === "menu" && <span>Sign out</span>}
     </button>
   );
 }
