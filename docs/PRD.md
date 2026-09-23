@@ -19,7 +19,7 @@ Deliberately not included: no editing, sharing, or exporting of the generated it
 - ORM: Prisma
 - Database: PostgreSQL (a dedicated database for this project, separate from Assessment 1 and 2's)
 - Vision/extraction model: Google Gemini 3 Flash Preview (`gemini-3-flash-preview`, official Google SDK), chosen for its multimodal vision capability — it reads the uploaded photo directly and returns structured JSON. Gemini 2.5 Flash was the original plan, but it was inaccessible to new API keys as of this build; Gemini 3 Flash Preview was substituted as Google’s documented direct replacement.
-- Text/follow-up model: DeepSeek, called via the official OpenAI SDK pointed at DeepSeek's API endpoint (DeepSeek's API is OpenAI-compatible) — chosen because the follow-up action is text-only and doesn't need vision, so a separate, simpler model handles it.
+- Text/follow-up model: DeepSeek V4.1 Flash, called with the current API identifier `deepseek-flash` via the official OpenAI SDK pointed at DeepSeek's API endpoint (DeepSeek's API is OpenAI-compatible) — chosen because the follow-up action is text-only and doesn't need vision, so a separate, simpler model handles it.
 - Image search: Unsplash API, used to fetch a real photo matching the extracted destination name. This is not an AI model call — it's a straightforward search-and-fetch, used to add a genuine, non-AI third-party API integration to the build, disclosed here as a deliberate learning choice beyond the assessment's minimum requirement.
 - Validation: Zod, for validating structured output from both models before it's trusted or stored.
 - Styling: Tailwind CSS
@@ -74,7 +74,7 @@ The GitHub repository (`Roami-ai-integration`, separate git history from Assessm
 
 ## 11. Resolved decisions
 
-1. **Model versions:** Gemini 2.5 Flash was the original extraction plan, but as of September 23, 2026 it is inaccessible to new API keys even though its official shutdown date has not arrived. The provider returned a 404 directing new projects to Gemini 3 Flash Preview, so `gemini-3-flash-preview` was substituted as Google’s documented direct replacement. It supports multimodal image input and structured outputs. DeepSeek V4.1 Flash is used for the expand action, accessed via the OpenAI SDK pointed at `api.deepseek.com`.
+1. **Model versions:** Gemini 2.5 Flash was the original extraction plan, but as of September 23, 2026 it is inaccessible to new API keys even though its official shutdown date has not arrived. The provider returned a 404 directing new projects to Gemini 3 Flash Preview, so `gemini-3-flash-preview` was substituted as Google’s documented direct replacement. It supports multimodal image input and structured outputs. As of September 23, 2026, DeepSeek V4.1 Flash is the newest suitable text model; its current API identifier is `deepseek-flash`. The older `deepseek-v4-flash` name is a retired compatibility alias. DeepSeek is accessed via the OpenAI SDK pointed at `api.deepseek.com`.
 
 2. **Background job mechanism:** An async function is triggered immediately after the upload endpoint responds. No separate queue library or external service (such as Redis or BullMQ) is used. This assessment targets a single-instance local/demo deployment, so a full queue system would add infrastructure this slice does not need. Known limitation: jobs in flight do not survive a server restart; this is documented in Section 7.
 

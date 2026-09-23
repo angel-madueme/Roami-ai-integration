@@ -14,7 +14,7 @@ _To be completed._
 
 3. The client polls `GET /api/itinerary/job/[id]` with the same authenticated session. The endpoint scopes the lookup by both job id and requesting user id, so another user’s job is never returned. `PROCESSING` returns the current status and attempts; `DONE` includes the full `Itinerary` and ordered `ItineraryActivity` records; `FAILED` includes `errorMessage`.
 
-4. The background worker reads the uploaded image from the job’s `storageKey` and passes it to `lib/gemini.ts`. That client uses Google’s official Gemini SDK with Gemini 2.5 Flash, the configured 30-second timeout, temperature, and output-token cap. Its system prompt requests only the structured itinerary JSON and Gemini receives an explicit JSON response schema for the destination, ISO dates, activity categories, titles, and notes.
+4. The background worker reads the uploaded image from the job’s `storageKey` and passes it to `lib/gemini.ts`. That client uses Google’s official Gemini SDK with Gemini 3 Flash Preview, the configured 30-second timeout, temperature, and output-token cap. Its system prompt requests only the structured itinerary JSON and Gemini receives an explicit JSON response schema for the destination, ISO dates, activity categories, titles, and notes.
 
 5. The worker parses Gemini’s raw JSON response and validates it independently with the Zod itinerary schema. A successful response that fails validation is sent through exactly one retry with the same input. A second validation failure marks the job `FAILED` and records the validation error; timeout and provider errors are marked failed without retry. A valid response creates the `Itinerary` and ordered `ItineraryActivity` rows, then marks the job `DONE`.
 
@@ -28,6 +28,8 @@ _To be completed._
    ```
 
    The upload response is immediate and contains `{ "id": "<job-id>", "status": "PROCESSING" }`. A later poll returns `DONE` with the persisted itinerary and activities, or `FAILED` with the recorded timeout, provider, or validation error.
+
+8. To expand a completed itinerary, the signed-in client sends `POST /api/itinerary/[id]/expand`. The route enforces the 10-requests-per-user-per-10-minutes limit, sends the current structured itinerary to `lib/deepseek.ts`, and uses DeepSeek V4.1 Flash through the official OpenAI SDK with `https://api.deepseek.com` as the overridden base URL. The response is independently validated with Zod and retried once only for schema-validation failure. A successful response updates existing activity notes and appends new activities in one database transaction, so provider, timeout, and validation failures leave the current itinerary unchanged.
 ## 4. The Data Model
 
 `ItineraryJob` records every uploaded image and tracks the asynchronous extraction lifecycle through `PENDING`, `PROCESSING`, `DONE`, or `FAILED`, including attempts, failure details, and the local filesystem storage key. `Itinerary` stores one successful structured result for a job, including the destination, dates, optional Unsplash photo attribution, and timestamps. `ItineraryActivity` stores the ordered, categorized activities belonging to an itinerary.
@@ -42,6 +44,10 @@ Structured output means Gemini is asked for a JSON object matching an explicit i
 `lib/gemini.ts` requests Gemini’s JSON response mode and response schema. `lib/itinerary-job.ts` independently parses the returned JSON and validates it with Zod before any database rows are created. If a successful response fails validation, the same input is retried once; if validation fails again, the job is marked `FAILED` with the validation error. Timeouts and provider errors are not retried.
 
 This was chosen instead of trusting the model’s own schema enforcement alone. The model-side schema guides generation, while application-side Zod validation is the independent safety boundary before data is persisted.
+
+### SDKs versus raw HTTP
+
+DeepSeek is called through the official OpenAI SDK even though DeepSeek is a different provider because DeepSeek deliberately exposes an OpenAI-compatible API. `lib/deepseek.ts` constructs the official `OpenAI` client with `baseURL: "https://api.deepseek.com"`, the configured `deepseek-flash` model, timeout, temperature, and JSON response mode. This reuses a well-tested SDK for request construction, authentication, timeout handling, and response typing instead of maintaining a custom raw HTTP client for DeepSeek.
 ## 6. What Went Wrong
 
 _To be completed._

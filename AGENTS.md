@@ -9,7 +9,7 @@ Roami’s AI integration slice is a single upload-to-result-to-expand flow: a us
 - ORM: Prisma
 - Database: PostgreSQL, using a dedicated database for this project separate from Assessment 1 and 2’s
 - Vision/extraction model: Gemini 3 Flash Preview (`gemini-3-flash-preview`) through Google’s official Gemini SDK. Gemini 2.5 Flash was the original plan, but it is inaccessible to new API keys as of this build; this is Google’s documented direct replacement.
-- Text/follow-up model: DeepSeek V4.1 Flash through the official OpenAI SDK pointed at `api.deepseek.com`; DeepSeek’s API is OpenAI-compatible
+- Text/follow-up model: DeepSeek V4.1 Flash using the current API identifier `deepseek-flash`, through the official OpenAI SDK pointed at `api.deepseek.com`; DeepSeek’s API is OpenAI-compatible
 - Image search: Unsplash API for destination photos
 - Validation: Zod for validating structured output from both models before it is trusted or stored
 - Styling: Tailwind CSS
