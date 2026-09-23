@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withGeminiConcurrency } from "@/lib/concurrency";
 import { extractItineraryWithGemini, GeminiTimeoutError } from "@/lib/gemini";
+import { findDestinationPhoto } from "@/lib/unsplash";
 
 const extractionPrompt = `
 You are Roami's itinerary extraction model. Read the uploaded travel-notes image and return only the structured JSON requested by the response schema.
@@ -98,12 +99,17 @@ async function processJob(jobId: string): Promise<void> {
     return;
   }
 
+  const destinationPhoto = await findDestinationPhoto(validated.destination);
+
   await prisma.itinerary.create({
     data: {
       jobId,
       destination: validated.destination,
       startDate: new Date(`${validated.startDate}T00:00:00.000Z`),
       endDate: new Date(`${validated.endDate}T00:00:00.000Z`),
+      unsplashImageUrl: destinationPhoto?.imageUrl ?? null,
+      unsplashPhotographerName: destinationPhoto?.photographerName ?? null,
+      unsplashPhotographerUrl: destinationPhoto?.photographerUrl ?? null,
       activities: {
         create: validated.activities.map((activity, index) => ({
           category: activity.category,

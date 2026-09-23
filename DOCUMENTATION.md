@@ -18,7 +18,9 @@ _To be completed._
 
 5. The worker parses Gemini’s raw JSON response and validates it independently with the Zod itinerary schema. A successful response that fails validation is sent through exactly one retry with the same input. A second validation failure marks the job `FAILED` and records the validation error; timeout and provider errors are marked failed without retry. A valid response creates the `Itinerary` and ordered `ItineraryActivity` rows, then marks the job `DONE`.
 
-6. Poll the returned job id while the worker runs:
+6. Before creating the successful `Itinerary`, the worker calls `lib/unsplash.ts` with the extracted destination. That module searches Unsplash using `UNSPLASH_ACCESS_KEY` and returns the first usable photo plus photographer attribution. Unsplash failures or empty results are treated as optional enrichment: the job still reaches `DONE`, with the three Unsplash fields left `null` when no photo is available.
+
+7. Poll the returned job id while the worker runs:
 
    ```bash
    curl -i http://localhost:3000/api/itinerary/job/<job-id> \
